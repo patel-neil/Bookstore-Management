@@ -33,6 +33,7 @@ class Book(models.Model):
 class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=1)    
     items_json = models.CharField(max_length=5000, blank=True)
+    books = models.ManyToManyField('Book')
     price = models.IntegerField(default=0)
     name = models.CharField(max_length=100, blank=True)
     email = models.CharField(max_length=100, blank=True)

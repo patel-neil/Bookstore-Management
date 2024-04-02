@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect, HttpResponse
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth  import authenticate,  login, logout
-from .decorators import restricted_login, admin_or_user
 from .forms import BookForm, RequestBookForm
 from .models import *
 from django.contrib.auth.decorators import login_required
@@ -64,11 +63,15 @@ def Logout(request):
     thank = True
     return render(request, "index.html", {'thank':thank})
 
-@admin_or_user
 def Admin(request):
-    books = Book.objects.all()
-    total_books = books.count()
-    return render (request, "for_admin.html", {'books':books, 'total_books':total_books})
+    if request.user.is_superuser or request.user.is_staff:
+        books = Book.objects.all()
+        total_books = books.count()
+        return render(request, "for_admin.html", {'books':books, 'total_books':total_books})
+    else:
+        # Handle the case when the user is not an admin
+        return HttpResponse("You are not authorized to access this page.")
+
 
 def Delete_Books(request, myid):
     books = Book.objects.get(id=myid)
@@ -77,11 +80,15 @@ def Delete_Books(request, myid):
         return redirect('/all_books')
     return render(request, 'delete_book.html', {'books':books})
 
-@login_required(login_url = '/user_login')
 def Users(request):
-    books = Book.objects.all()
-    total_books = books.count()
-    return render (request, "for_user.html", {'books':books, 'total_books':total_books})
+    if request.user.is_authenticated:
+        books = Book.objects.all()
+        total_books = books.count()
+        return render(request, "for_user.html", {'books':books, 'total_books':total_books})
+    else:
+        # Redirect the user to the login page if they are not authenticated
+        return redirect('/user_login')
+
 
 def Add_Books(request):
     if request.method=="POST":
@@ -141,6 +148,12 @@ def checkout(request):
         phone = request.POST.get('phone', '')
         order = Order(user=user, items_json=items_json, name=name, email=email, address=address, phone=phone, price=price)
         order.save()
+        if name and email and phone:
+            customer = Customer.objects.create(
+                name=name,
+                email=email,
+                phone=phone
+            )
         thank = True
         return render(request, 'mycart.html', {'thank':thank})
     return render(request, "mycart.html")
